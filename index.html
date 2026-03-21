@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SPY – Last 2 Years</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="container">
+    <h1>SPY – Last 2 Years</h1>
+
+    <div id="api-key-section" class="api-key-section" style="display:none">
+      <p>Enter your free <a href="https://www.alphavantage.co/support/#api-key" target="_blank">Alpha Vantage API key</a> to load data. It's saved in your browser — you'll only need to do this once.</p>
+      <div class="api-key-row">
+        <input type="text" id="api-key-input" placeholder="Paste your API key here" />
+        <button id="api-key-submit">Load Chart</button>
+      </div>
+    </div>
+
+    <div id="summary" class="summary"></div>
+    <div id="error" class="error" style="display:none"></div>
+
+    <div id="charts" style="display:none">
+      <div class="chart-wrap">
+        <canvas id="priceChart"></canvas>
+      </div>
+      <div class="chart-wrap volume-wrap">
+        <canvas id="volumeChart"></canvas>
+      </div>
+      <p class="reset-link"><a href="#" id="reset-key">Change API key</a></p>
+    </div>
+  </div>
+
+  <script>
+    let priceChart, volumeChart;
+
+    function showError(msg) {
+      const el = document.getElementById("error");
+      el.textContent = msg;
+      el.style.display = "block";
+      document.getElementById("summary").innerHTML = "";
+      document.getElementById("charts").style.display = "none";
+    }
+
+    async function loadData(apiKey) {
+      document.getElementById("summary").innerHTML = "<span class='pill'>Loading...</span>";
+      document.getElementById("error").style.display = "none";
+
+      const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&outputsize=full&apikey=${apiKey}`;
+      let json;
+      try {
+        const res = await fetch(url);
+        json = await res.json();
+      } catch (e) {
+        showError("Network error — check your connection and try again.");
+        return;
+      }
+
+      if (json["Note"] || json["Information"]) {
+        showError("API rate limit reached (25 calls/day on free tier). Try again tomorrow.");
+        return;
+      }
+
+      const series = json["Time Series (Daily)"];
+      if (!series) {
+        showError("Invalid API key or no data returned. Check your key and try again.");
+        localStorage.removeItem("av_api_key");
+        document.getElementById("api-key-section").style.display = "block";
+        document.getElementById("summary").innerHTML = "";
+        return;
+      }
+
+      const twoYearsAgo = new Date();
+      twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
+
+      const dates = [], closes = [], volumes = [];
+      Object.entries(series)
+        .filter(([date]) => new Date(date) >= twoYearsAgo)
+        .sort(([a], [b]) => a.localeCompare(b))
+        .forEach(([date, vals]) => {
+          dates.push(date);
+          closes.push(parseFloat(vals["5. adjusted close"]));
+          volumes.push(parseInt(vals["6. volume"]));
+        });
+
+      if (dates.length === 0) {
+        showError("No data found for the last 2 years.");
+        return;
+      }
+
+      const firstClose = closes[0];
+      const lastClose = closes[closes.length - 1];
+      const twoYrReturn = ((lastClose - firstClose) / firstClose * 100).toFixed(2);
+      const returnColor = twoYrReturn >= 0 ? "positive" : "negative";
+
+      document.getElementById("summary").innerHTML = `
+        <span class="pill"><strong>Ticker:</strong> SPY</span>
+        <span class="pill"><strong>Range:</strong> ${dates[0]} → ${dates[dates.length - 1]}</span>
+        <span class="pill"><strong>Latest Close:</strong> $${lastClose.toFixed(2)}</span>
+        <span class="pill ${returnColor}"><strong>2-Year Return:</strong> ${twoYrReturn >= 0 ? "+" : ""}${twoYrReturn}%</span>
+      `;
+
+      document.getElementById("charts").style.display = "block";
+
+      if (priceChart) priceChart.destroy();
+      if (volumeChart) volumeChart.destroy();
+
+      priceChart = new Chart(document.getElementById("priceChart"), {
+        type: "line",
+        data: {
+          labels: dates,
+          datasets: [{
+            label: "Adj Close",
+            data: closes,
+            borderColor: "#4f8ef7",
+            backgroundColor: "rgba(79,142,247,0.08)",
+            borderWidth: 1.5,
+            pointRadius: 0,
+            fill: true,
+            tension: 0.1,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: "SPY – Adjusted Close", font: { size: 14 } }
+          },
+          scales: {
+            x: { ticks: { maxTicksLimit: 12 } },
+            y: { ticks: { callback: v => "$" + v } }
+          }
+        }
+      });
+
+      volumeChart = new Chart(document.getElementById("volumeChart"), {
+        type: "bar",
+        data: {
+          labels: dates,
+          datasets: [{
+            label: "Volume",
+            data: volumes,
+            backgroundColor: "rgba(120,120,180,0.4)",
+            borderWidth: 0,
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: { display: true, text: "Volume", font: { size: 14 } }
+          },
+          scales: {
+            x: { ticks: { maxTicksLimit: 12 } },
+            y: { ticks: { callback: v => (v / 1e6).toFixed(0) + "M" } }
+          }
+        }
+      });
+    }
+
+    function init() {
+      const savedKey = localStorage.getItem("av_api_key");
+      if (savedKey) {
+        loadData(savedKey);
+      } else {
+        document.getElementById("api-key-section").style.display = "block";
+        document.getElementById("summary").innerHTML = "";
+      }
+    }
+
+    document.getElementById("api-key-submit").addEventListener("click", () => {
+      const key = document.getElementById("api-key-input").value.trim();
+      if (!key) return;
+      localStorage.setItem("av_api_key", key);
+      document.getElementById("api-key-section").style.display = "none";
+      loadData(key);
+    });
+
+    document.getElementById("api-key-input").addEventListener("keydown", e => {
+      if (e.key === "Enter") document.getElementById("api-key-submit").click();
+    });
+
+    document.getElementById("reset-key").addEventListener("click", e => {
+      e.preventDefault();
+      localStorage.removeItem("av_api_key");
+      if (priceChart) priceChart.destroy();
+      if (volumeChart) volumeChart.destroy();
+      document.getElementById("charts").style.display = "none";
+      document.getElementById("summary").innerHTML = "";
+      document.getElementById("api-key-input").value = "";
+      document.getElementById("api-key-section").style.display = "block";
+    });
+
+    init();
+  </script>
+</body>
+</html>
