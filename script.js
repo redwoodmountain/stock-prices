@@ -41,16 +41,11 @@ let chart         = null;
 
 // ── Data Fetching ─────────────────────────────────────────
 async function fetchPrices(ticker, rangeKey, fromDate, toDate) {
-  let yahooUrl;
-  if (fromDate && toDate) {
-    // Custom date range — use period1/period2 unix timestamps
-    const p1 = Math.floor(new Date(fromDate).getTime() / 1000);
-    const p2 = Math.floor(new Date(toDate).getTime() / 1000) + 86400; // inclusive
-    yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${p1}&period2=${p2}&interval=1d`;
-  } else {
-    const { range, interval } = RANGE_MAP[rangeKey];
-    yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=${range}&interval=${interval}`;
-  }
+  // Custom date mode: fetch max history and filter client-side
+  const { range, interval } = fromDate
+    ? { range: 'max', interval: '1d' }
+    : RANGE_MAP[rangeKey];
+  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=${range}&interval=${interval}`;
   const url = 'https://corsproxy.io/?' + encodeURIComponent(yahooUrl);
 
   const res  = await fetch(url);
@@ -76,6 +71,10 @@ async function fetchPrices(ticker, rangeKey, fromDate, toDate) {
     if (rawPrices[i] == null) return;
     const d = new Date(ts * 1000);
     if (rangeKey === 'mtd' && d < mtdStart) return;
+
+    // Custom date range filter
+    const dateStr = d.toISOString().slice(0, 10);
+    if (fromDate && (dateStr < fromDate || dateStr > toDate)) return;
 
     const label = isIntraday
       ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
