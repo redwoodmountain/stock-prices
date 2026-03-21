@@ -46,12 +46,17 @@ async function fetchPrices(ticker, rangeKey) {
   const res  = await fetch(url);
   const json = await res.json();
   const result = json?.chart?.result?.[0];
-  if (!result) throw new Error('No data returned');
+  if (!result) return { empty: true };
 
   const timestamps = result.timestamp;
   // Use adjusted close when available, fall back to close
-  const rawPrices = result.indicators.adjclose?.[0]?.adjclose
-                 ?? result.indicators.quote[0].close;
+  const rawPrices = result.indicators?.adjclose?.[0]?.adjclose
+                 ?? result.indicators?.quote?.[0]?.close;
+
+  // Guard: if timestamps or prices are missing/empty, treat as no data
+  if (!timestamps?.length || !rawPrices?.length) {
+    return { empty: true };
+  }
 
   let dates = [], prices = [];
 
@@ -75,15 +80,7 @@ async function fetchPrices(ticker, rangeKey) {
     prices.push(parseFloat(rawPrices[i].toFixed(2)));
   });
 
-  // Graceful fallback: if Today returned empty intraday, fetch last daily close
-  if (rangeKey === 'today' && dates.length === 0) {
-    return fetchPrices(ticker, '1y').then(data => ({
-      ...data,
-      fallback: true,
-    }));
-  }
-
-  if (dates.length === 0) throw new Error('No data for this range');
+  if (dates.length === 0) return { empty: true };
 
   const first = prices[0];
   const last  = prices[prices.length - 1];
@@ -100,6 +97,17 @@ async function fetchPrices(ticker, rangeKey) {
       returnPct:  parseFloat(ret),
     },
   };
+}
+
+// ── Empty / Error State ────────────────────────────────────
+function showEmpty() {
+  if (chart) { chart.destroy(); chart = null; }
+  document.getElementById('error').textContent = 'Data not yet available';
+  document.getElementById('error').hidden = false;
+  ['s-ticker','s-range','s-start','s-end','s-price','s-return'].forEach(id => {
+    document.getElementById(id).textContent = '—';
+    document.getElementById(id).className   = 'stat-value';
+  });
 }
 
 // ── Summary Card ──────────────────────────────────────────
@@ -257,15 +265,15 @@ async function fetchAndRender() {
 
   try {
     const data = await fetchPrices(activeTicker, activeRange);
+    if (data.empty) {
+      showEmpty();
+      return;
+    }
     renderSummary(data.summary);
-    renderChart(data.dates, data.prices, data.fallback ? '1y' : activeRange);
+    renderChart(data.dates, data.prices, activeRange);
   } catch (err) {
-    document.getElementById('error').textContent = 'Failed to load data — ' + err.message;
-    document.getElementById('error').hidden = false;
-    ['s-ticker','s-range','s-start','s-end','s-price','s-return'].forEach(id => {
-      document.getElementById(id).textContent = '—';
-      document.getElementById(id).className   = 'stat-value';
-    });
+    console.error(err);
+    showEmpty();
   }
 }
 
