@@ -18,51 +18,6 @@ h1 {
   margin-bottom: 1rem;
 }
 
-.api-key-section {
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 1.25rem;
-  margin-bottom: 1.5rem;
-}
-
-.api-key-section p {
-  font-size: 0.9rem;
-  margin-bottom: 0.75rem;
-  color: #444;
-}
-
-.api-key-section a {
-  color: #4f8ef7;
-}
-
-.api-key-row {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.api-key-row input {
-  flex: 1;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  font-size: 0.9rem;
-}
-
-.api-key-row button {
-  padding: 0.5rem 1rem;
-  background: #4f8ef7;
-  color: #fff;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.api-key-row button:hover {
-  background: #3a7be0;
-}
-
 .summary {
   display: flex;
   flex-wrap: wrap;
@@ -102,12 +57,3 @@ h1 {
 
 .volume-wrap { max-height: 220px; }
 
-.reset-link {
-  font-size: 0.8rem;
-  text-align: right;
-  margin-top: -0.75rem;
-}
-
-.reset-link a {
-  color: #999;
-}

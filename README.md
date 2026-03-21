@@ -17,13 +17,9 @@ Plus a summary bar showing the ticker, date range, latest close, and 2-year retu
 
 ---
 
-## Setup (First Visit)
+## Setup
 
-1. Get a free API key at **alphavantage.co/support/#api-key** (just name + email, no credit card)
-2. Open the site and paste your key when prompted
-3. The key is saved in your browser — you'll only need to enter it once
-
-**Free tier limit:** 25 API calls/day — more than enough for personal use.
+No setup needed. Just open the URL — it loads automatically.
 
 ---
 
@@ -32,7 +28,7 @@ Plus a summary bar showing the ticker, date range, latest close, and 2-year retu
 | Tool | Purpose |
 |------|---------|
 | HTML/CSS/JS | Everything — no framework, no backend |
-| [Alpha Vantage](https://www.alphavantage.co) | Free stock market data API |
+| Yahoo Finance | Free stock market data (via corsproxy.io) |
 | [Chart.js](https://www.chartjs.org) | Interactive charts (loaded from CDN) |
 | GitHub Pages | Free static site hosting |
 

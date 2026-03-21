@@ -10,18 +10,8 @@
 <body>
   <div class="container">
     <h1>SPY – Last 2 Years</h1>
-
-    <div id="api-key-section" class="api-key-section" style="display:none">
-      <p>Enter your free <a href="https://www.alphavantage.co/support/#api-key" target="_blank">Alpha Vantage API key</a> to load data. It's saved in your browser — you'll only need to do this once.</p>
-      <div class="api-key-row">
-        <input type="text" id="api-key-input" placeholder="Paste your API key here" />
-        <button id="api-key-submit">Load Chart</button>
-      </div>
-    </div>
-
-    <div id="summary" class="summary"></div>
+    <div id="summary" class="summary"><span class="pill">Loading...</span></div>
     <div id="error" class="error" style="display:none"></div>
-
     <div id="charts" style="display:none">
       <div class="chart-wrap">
         <canvas id="priceChart"></canvas>
@@ -29,7 +19,6 @@
       <div class="chart-wrap volume-wrap">
         <canvas id="volumeChart"></canvas>
       </div>
-      <p class="reset-link"><a href="#" id="reset-key">Change API key</a></p>
     </div>
   </div>
 
@@ -37,18 +26,16 @@
     let priceChart, volumeChart;
 
     function showError(msg) {
-      const el = document.getElementById("error");
-      el.textContent = msg;
-      el.style.display = "block";
+      document.getElementById("error").textContent = msg;
+      document.getElementById("error").style.display = "block";
       document.getElementById("summary").innerHTML = "";
       document.getElementById("charts").style.display = "none";
     }
 
-    async function loadData(apiKey) {
-      document.getElementById("summary").innerHTML = "<span class='pill'>Loading...</span>";
-      document.getElementById("error").style.display = "none";
+    async function loadData() {
+      const yahooUrl = "https://query1.finance.yahoo.com/v8/finance/chart/SPY?range=2y&interval=1d";
+      const url = "https://corsproxy.io/?" + encodeURIComponent(yahooUrl);
 
-      const url = `https://www.alphavantage.co/query?function=TIME_SERIES_DAILY_ADJUSTED&symbol=SPY&outputsize=full&apikey=${apiKey}`;
       let json;
       try {
         const res = await fetch(url);
@@ -58,35 +45,27 @@
         return;
       }
 
-      if (json["Note"] || json["Information"]) {
-        showError("API rate limit reached (25 calls/day on free tier). Try again tomorrow.");
+      const result = json?.chart?.result?.[0];
+      if (!result) {
+        showError("Failed to load data. Please try refreshing.");
         return;
       }
 
-      const series = json["Time Series (Daily)"];
-      if (!series) {
-        showError("Invalid API key or no data returned. Check your key and try again.");
-        localStorage.removeItem("av_api_key");
-        document.getElementById("api-key-section").style.display = "block";
-        document.getElementById("summary").innerHTML = "";
-        return;
-      }
+      const timestamps = result.timestamp;
+      const adjCloses = result.indicators.adjclose?.[0]?.adjclose || result.indicators.quote[0].close;
+      const volumes = result.indicators.quote[0].volume;
 
-      const twoYearsAgo = new Date();
-      twoYearsAgo.setFullYear(twoYearsAgo.getFullYear() - 2);
-
-      const dates = [], closes = [], volumes = [];
-      Object.entries(series)
-        .filter(([date]) => new Date(date) >= twoYearsAgo)
-        .sort(([a], [b]) => a.localeCompare(b))
-        .forEach(([date, vals]) => {
-          dates.push(date);
-          closes.push(parseFloat(vals["5. adjusted close"]));
-          volumes.push(parseInt(vals["6. volume"]));
-        });
+      const dates = [], closes = [], vols = [];
+      timestamps.forEach((ts, i) => {
+        if (adjCloses[i] == null) return;
+        const d = new Date(ts * 1000);
+        dates.push(d.toISOString().slice(0, 10));
+        closes.push(parseFloat(adjCloses[i].toFixed(2)));
+        vols.push(volumes[i] || 0);
+      });
 
       if (dates.length === 0) {
-        showError("No data found for the last 2 years.");
+        showError("No data returned. Please try refreshing.");
         return;
       }
 
@@ -141,7 +120,7 @@
           labels: dates,
           datasets: [{
             label: "Volume",
-            data: volumes,
+            data: vols,
             backgroundColor: "rgba(120,120,180,0.4)",
             borderWidth: 0,
           }]
@@ -160,40 +139,7 @@
       });
     }
 
-    function init() {
-      const savedKey = localStorage.getItem("av_api_key");
-      if (savedKey) {
-        loadData(savedKey);
-      } else {
-        document.getElementById("api-key-section").style.display = "block";
-        document.getElementById("summary").innerHTML = "";
-      }
-    }
-
-    document.getElementById("api-key-submit").addEventListener("click", () => {
-      const key = document.getElementById("api-key-input").value.trim();
-      if (!key) return;
-      localStorage.setItem("av_api_key", key);
-      document.getElementById("api-key-section").style.display = "none";
-      loadData(key);
-    });
-
-    document.getElementById("api-key-input").addEventListener("keydown", e => {
-      if (e.key === "Enter") document.getElementById("api-key-submit").click();
-    });
-
-    document.getElementById("reset-key").addEventListener("click", e => {
-      e.preventDefault();
-      localStorage.removeItem("av_api_key");
-      if (priceChart) priceChart.destroy();
-      if (volumeChart) volumeChart.destroy();
-      document.getElementById("charts").style.display = "none";
-      document.getElementById("summary").innerHTML = "";
-      document.getElementById("api-key-input").value = "";
-      document.getElementById("api-key-section").style.display = "block";
-    });
-
-    init();
+    loadData();
   </script>
 </body>
 </html>
