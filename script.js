@@ -33,18 +33,13 @@ function formatDate(isoStr) {
 }
 
 // ── State ─────────────────────────────────────────────────
-let activeTicker  = 'SPY';
-let activeRange   = '2y';
-let customFrom    = null;  // ISO string "YYYY-MM-DD" when in custom mode
-let customTo      = null;
-let chart         = null;
+let activeTicker = 'SPY';
+let activeRange  = '2y';
+let chart        = null;
 
 // ── Data Fetching ─────────────────────────────────────────
-async function fetchPrices(ticker, rangeKey, fromDate, toDate) {
-  // Custom date mode: fetch max history and filter client-side
-  const { range, interval } = fromDate
-    ? { range: 'max', interval: '1d' }
-    : RANGE_MAP[rangeKey];
+async function fetchPrices(ticker, rangeKey) {
+  const { range, interval } = RANGE_MAP[rangeKey];
   const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=${range}&interval=${interval}`;
   const url = 'https://corsproxy.io/?' + encodeURIComponent(yahooUrl);
 
@@ -72,10 +67,6 @@ async function fetchPrices(ticker, rangeKey, fromDate, toDate) {
     const d = new Date(ts * 1000);
     if (rangeKey === 'mtd' && d < mtdStart) return;
 
-    // Custom date range filter
-    const dateStr = d.toISOString().slice(0, 10);
-    if (fromDate && (dateStr < fromDate || dateStr > toDate)) return;
-
     const label = isIntraday
       ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
       : d.toISOString().slice(0, 10);
@@ -102,7 +93,7 @@ async function fetchPrices(ticker, rangeKey, fromDate, toDate) {
     dates, prices,
     summary: {
       ticker,
-      range:      fromDate && toDate ? 'Custom' : RANGE_LABELS[rangeKey],
+      range:      RANGE_LABELS[rangeKey],
       start:      dates[0],
       end:        dates[dates.length - 1],
       latest:     last,
@@ -260,15 +251,14 @@ async function fetchAndRender() {
   document.querySelectorAll('#ticker-group .btn').forEach(b => {
     b.classList.toggle('active', b.dataset.ticker === activeTicker);
   });
-  // Deactivate range buttons when in custom mode
   document.querySelectorAll('#range-group .btn').forEach(b => {
-    b.classList.toggle('active', !customFrom && b.dataset.range === activeRange);
+    b.classList.toggle('active', b.dataset.range === activeRange);
   });
 
   try {
-    const data = await fetchPrices(activeTicker, activeRange, customFrom, customTo);
+    const data = await fetchPrices(activeTicker, activeRange);
     renderSummary(data.summary);
-    renderChart(data.dates, data.prices, customFrom ? 'custom' : (data.fallback ? '1y' : activeRange));
+    renderChart(data.dates, data.prices, data.fallback ? '1y' : activeRange);
   } catch (err) {
     document.getElementById('error').textContent = 'Failed to load data — ' + err.message;
     document.getElementById('error').hidden = false;
@@ -291,25 +281,6 @@ document.getElementById('range-group').addEventListener('click', e => {
   const btn = e.target.closest('.btn');
   if (!btn || !btn.dataset.range) return;
   activeRange = btn.dataset.range;
-  // Clear custom date mode
-  customFrom = null;
-  customTo   = null;
-  document.getElementById('date-from').value = '';
-  document.getElementById('date-to').value   = '';
-  fetchAndRender();
-});
-
-document.getElementById('apply-dates').addEventListener('click', () => {
-  const from = document.getElementById('date-from').value;
-  const to   = document.getElementById('date-to').value;
-  if (!from || !to) return;
-  if (from > to) {
-    document.getElementById('error').textContent = 'Start date must be before end date.';
-    document.getElementById('error').hidden = false;
-    return;
-  }
-  customFrom = from;
-  customTo   = to;
   fetchAndRender();
 });
 
