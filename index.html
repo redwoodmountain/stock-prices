@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ETF Tracker</title>
+  <title>SP500 Tracker</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
@@ -11,9 +14,26 @@
   <div class="container">
 
     <header>
-      <h1>ETF Tracker</h1>
-      <p class="subtitle">S&amp;P 500 ETF Price Viewer</p>
+      <div class="header-row">
+        <h1>SP500 Tracker</h1>
+        <button class="info-btn" id="info-btn" aria-label="About these ETFs">?</button>
+      </div>
     </header>
+
+    <!-- Info Drawer -->
+    <div class="drawer-overlay" id="drawer-overlay"></div>
+    <aside class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-header">
+        <h2>About These ETFs</h2>
+        <button class="drawer-close" id="drawer-close" aria-label="Close">✕</button>
+      </div>
+      <ul class="ticker-list">
+        <li><span class="ticker-tag">SPY</span><span>State Street's oldest, most liquid S&amp;P 500 ETF</span></li>
+        <li><span class="ticker-tag">VOO</span><span>Vanguard's low-cost S&amp;P 500 tracker</span></li>
+        <li><span class="ticker-tag">IVV</span><span>BlackRock's low-fee S&amp;P 500 ETF</span></li>
+        <li><span class="ticker-tag">SPLG</span><span>State Street's lowest-cost S&amp;P 500 ETF</span></li>
+      </ul>
+    </aside>
 
     <div class="controls">
       <div class="btn-group" id="ticker-group">

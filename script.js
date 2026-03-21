@@ -256,5 +256,26 @@ document.getElementById('range-group').addEventListener('click', e => {
   fetchAndRender();
 });
 
+// ── Info Drawer ───────────────────────────────────────────
+const drawer  = document.getElementById('drawer');
+const overlay = document.getElementById('drawer-overlay');
+
+function openDrawer() {
+  drawer.classList.add('open');
+  overlay.classList.add('open');
+  drawer.setAttribute('aria-hidden', 'false');
+}
+
+function closeDrawer() {
+  drawer.classList.remove('open');
+  overlay.classList.remove('open');
+  drawer.setAttribute('aria-hidden', 'true');
+}
+
+document.getElementById('info-btn').addEventListener('click', openDrawer);
+document.getElementById('drawer-close').addEventListener('click', closeDrawer);
+overlay.addEventListener('click', closeDrawer);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
 // ── Init ──────────────────────────────────────────────────
 fetchAndRender();
