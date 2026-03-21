@@ -214,6 +214,14 @@ h1 {
   line-height: 1;
 }
 
+/* Ticker buttons slightly larger */
+#ticker-group .btn {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  padding: 0.42rem 1rem;
+}
+
 .btn:hover:not(.active) {
   background: var(--accent-light);
   color: var(--accent);

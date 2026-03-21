@@ -18,6 +18,20 @@ const RANGE_LABELS = {
   '1y': '1Y', ytd: 'YTD', mtd: 'MTD', today: 'Today',
 };
 
+// ── Helpers ───────────────────────────────────────────────
+function formatDate(isoStr) {
+  // "2025-03-21" → "March 21st, 2025"
+  if (!isoStr || isoStr.includes(':')) return isoStr; // skip intraday times
+  const [year, month, day] = isoStr.split('-').map(Number);
+  const d = new Date(year, month - 1, day);
+  const suffix = (n => {
+    if (n >= 11 && n <= 13) return 'th';
+    return ['th','st','nd','rd'][n % 10] ?? 'th';
+  })(day);
+  const mon = d.toLocaleString('en-US', { month: 'long' });
+  return `${mon} ${day}${suffix}, ${year}`;
+}
+
 // ── State ─────────────────────────────────────────────────
 let activeTicker = 'SPY';
 let activeRange  = '2y';
@@ -106,8 +120,8 @@ function renderSummary({ ticker, range, start, end, latest, returnPct }) {
   };
   set('s-ticker', ticker);
   set('s-range',  range);
-  set('s-start',  start);
-  set('s-end',    end);
+  set('s-start',  formatDate(start));
+  set('s-end',    formatDate(end));
   set('s-price',  '$' + latest.toFixed(2));
   set('s-return',
     (returnPct >= 0 ? '+' : '') + returnPct + '%',
