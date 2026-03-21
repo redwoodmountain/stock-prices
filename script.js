@@ -33,14 +33,24 @@ function formatDate(isoStr) {
 }
 
 // ── State ─────────────────────────────────────────────────
-let activeTicker = 'SPY';
-let activeRange  = '2y';
-let chart        = null;
+let activeTicker  = 'SPY';
+let activeRange   = '2y';
+let customFrom    = null;  // ISO string "YYYY-MM-DD" when in custom mode
+let customTo      = null;
+let chart         = null;
 
 // ── Data Fetching ─────────────────────────────────────────
-async function fetchPrices(ticker, rangeKey) {
-  const { range, interval } = RANGE_MAP[rangeKey];
-  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=${range}&interval=${interval}`;
+async function fetchPrices(ticker, rangeKey, fromDate, toDate) {
+  let yahooUrl;
+  if (fromDate && toDate) {
+    // Custom date range — use period1/period2 unix timestamps
+    const p1 = Math.floor(new Date(fromDate).getTime() / 1000);
+    const p2 = Math.floor(new Date(toDate).getTime() / 1000) + 86400; // inclusive
+    yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?period1=${p1}&period2=${p2}&interval=1d`;
+  } else {
+    const { range, interval } = RANGE_MAP[rangeKey];
+    yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=${range}&interval=${interval}`;
+  }
   const url = 'https://corsproxy.io/?' + encodeURIComponent(yahooUrl);
 
   const res  = await fetch(url);
@@ -93,7 +103,7 @@ async function fetchPrices(ticker, rangeKey) {
     dates, prices,
     summary: {
       ticker,
-      range:      RANGE_LABELS[rangeKey],
+      range:      fromDate && toDate ? 'Custom' : RANGE_LABELS[rangeKey],
       start:      dates[0],
       end:        dates[dates.length - 1],
       latest:     last,
@@ -131,6 +141,20 @@ function renderSummary({ ticker, range, start, end, latest, returnPct }) {
 
 // ── X-Axis Formatting ─────────────────────────────────────
 function xAxisOptions(rangeKey) {
+  if (rangeKey === 'custom') {
+    return {
+      ticks: {
+        maxTicksLimit: 10,
+        callback(val) {
+          const lbl = this.getLabelForValue(val);
+          if (!lbl || lbl.length < 7) return lbl;
+          const [year, month] = lbl.split('-');
+          const mon = new Date(+year, +month - 1).toLocaleString('en-US', { month: 'short' });
+          return `${mon} '${year.slice(2)}`;
+        },
+      },
+    };
+  }
   if (rangeKey === 'today') {
     return { ticks: { maxTicksLimit: 8 } };
   }
@@ -237,14 +261,15 @@ async function fetchAndRender() {
   document.querySelectorAll('#ticker-group .btn').forEach(b => {
     b.classList.toggle('active', b.dataset.ticker === activeTicker);
   });
+  // Deactivate range buttons when in custom mode
   document.querySelectorAll('#range-group .btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.range === activeRange);
+    b.classList.toggle('active', !customFrom && b.dataset.range === activeRange);
   });
 
   try {
-    const data = await fetchPrices(activeTicker, activeRange);
+    const data = await fetchPrices(activeTicker, activeRange, customFrom, customTo);
     renderSummary(data.summary);
-    renderChart(data.dates, data.prices, data.fallback ? '1y' : activeRange);
+    renderChart(data.dates, data.prices, customFrom ? 'custom' : (data.fallback ? '1y' : activeRange));
   } catch (err) {
     document.getElementById('error').textContent = 'Failed to load data — ' + err.message;
     document.getElementById('error').hidden = false;
@@ -267,6 +292,25 @@ document.getElementById('range-group').addEventListener('click', e => {
   const btn = e.target.closest('.btn');
   if (!btn || !btn.dataset.range) return;
   activeRange = btn.dataset.range;
+  // Clear custom date mode
+  customFrom = null;
+  customTo   = null;
+  document.getElementById('date-from').value = '';
+  document.getElementById('date-to').value   = '';
+  fetchAndRender();
+});
+
+document.getElementById('apply-dates').addEventListener('click', () => {
+  const from = document.getElementById('date-from').value;
+  const to   = document.getElementById('date-to').value;
+  if (!from || !to) return;
+  if (from > to) {
+    document.getElementById('error').textContent = 'Start date must be before end date.';
+    document.getElementById('error').hidden = false;
+    return;
+  }
+  customFrom = from;
+  customTo   = to;
   fetchAndRender();
 });
 

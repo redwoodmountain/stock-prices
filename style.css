@@ -235,37 +235,96 @@ h1 {
   box-shadow: 0 2px 6px rgba(37,99,235,0.3);
 }
 
+/* ── Date Range Row ────────────────────────────────────── */
+.date-range-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.date-range-row input[type="date"] {
+  font-family: inherit;
+  font-size: 0.8rem;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 0.38rem 0.65rem;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.date-range-row input[type="date"]:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+}
+
+.date-sep {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.apply-btn {
+  background: var(--accent) !important;
+  color: #fff !important;
+  font-size: 0.8rem !important;
+  padding: 0.38rem 0.9rem !important;
+  border-radius: 7px !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(37,99,235,0.25) !important;
+}
+
+.apply-btn:hover {
+  background: #1d4ed8 !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-hover) !important;
+}
+
 /* ── Summary Card ──────────────────────────────────────── */
 .summary-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: 1rem 1.25rem;
+  padding: 1.1rem 1.25rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0;
   margin-bottom: 1rem;
 }
 
 .stat {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  text-align: center;
+  padding: 0.25rem 0.5rem;
+  border-right: 1px solid var(--border);
+}
+
+.stat:last-child {
+  border-right: none;
 }
 
 .stat-label {
-  font-size: 0.68rem;
+  font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.07em;
   color: var(--muted);
+  white-space: nowrap;
 }
 
 .stat-value {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
+  white-space: nowrap;
 }
 
 .stat-value.positive { color: var(--positive); }
@@ -312,6 +371,15 @@ h1 {
 
   .summary-card {
     grid-template-columns: repeat(3, 1fr);
-    gap: 0.75rem;
+  }
+
+  .stat {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 0;
+  }
+
+  .stat:nth-child(3), .stat:last-child {
+    border-bottom: none;
   }
 }
