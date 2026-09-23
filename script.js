@@ -1,21 +1,20 @@
 // ── Config ────────────────────────────────────────────────
 const TICKERS = ['SPY', 'VOO', 'IVV', 'SPLG'];
 
-// Range key → Yahoo Finance API params
-const RANGE_MAP = {
-  max:   { range: 'max', interval: '1d' },
-  '5y':  { range: '5y',  interval: '1d' },
-  '3y':  { range: '3y',  interval: '1d' },
-  '2y':  { range: '2y',  interval: '1d' },
-  '1y':  { range: '1y',  interval: '1d' },
-  ytd:   { range: 'ytd', interval: '1d' },
-  mtd:   { range: '1mo', interval: '1d' },  // filtered client-side to MTD
-  today: { range: '1d',  interval: '5m' },
-};
-
 const RANGE_LABELS = {
   max: 'Max', '5y': '5Y', '3y': '3Y', '2y': '2Y',
   '1y': '1Y', ytd: 'YTD', mtd: 'MTD', today: 'Today',
+};
+
+// Range key → cutoff date relative to now (null = no cutoff, use all data)
+const RANGE_CUTOFF = {
+  max:   null,
+  '5y':  now => new Date(now.getFullYear() - 5, now.getMonth(), now.getDate()),
+  '3y':  now => new Date(now.getFullYear() - 3, now.getMonth(), now.getDate()),
+  '2y':  now => new Date(now.getFullYear() - 2, now.getMonth(), now.getDate()),
+  '1y':  now => new Date(now.getFullYear() - 1, now.getMonth(), now.getDate()),
+  ytd:   now => new Date(now.getFullYear(), 0, 1),
+  mtd:   now => new Date(now.getFullYear(), now.getMonth(), 1),
 };
 
 // ── Helpers ───────────────────────────────────────────────
@@ -38,20 +37,29 @@ let activeRange  = '2y';
 let chart        = null;
 
 // ── Data Fetching ─────────────────────────────────────────
-async function fetchPrices(ticker, rangeKey) {
-  const { range, interval } = RANGE_MAP[rangeKey];
-  const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?range=${range}&interval=${interval}`;
-  const url = 'https://corsproxy.io/?' + encodeURIComponent(yahooUrl);
+// Price data is fetched server-side (see fetch_data.py + the GitHub Actions
+// workflow) and committed to data/<TICKER>.json, so the page just reads the
+// static file — no third-party CORS proxy, no browser CORS restrictions.
+const dataCache = {};
 
-  const res  = await fetch(url);
+async function loadTickerData(ticker) {
+  if (dataCache[ticker]) return dataCache[ticker];
+  const res = await fetch(`data/${ticker}.json`);
+  if (!res.ok) throw new Error(`Failed to load data for ${ticker}`);
   const json = await res.json();
-  const result = json?.chart?.result?.[0];
-  if (!result) return { empty: true };
+  dataCache[ticker] = json;
+  return json;
+}
 
-  const timestamps = result.timestamp;
-  // Use adjusted close when available, fall back to close
-  const rawPrices = result.indicators?.adjclose?.[0]?.adjclose
-                 ?? result.indicators?.quote?.[0]?.close;
+async function fetchPrices(ticker, rangeKey) {
+  const data = await loadTickerData(ticker);
+  const isIntraday = rangeKey === 'today';
+  const source = isIntraday ? data.intraday
+    : rangeKey === 'max'   ? data.monthly
+    : data.daily;
+
+  const timestamps = source?.timestamp;
+  const rawPrices  = source?.adjclose;
 
   // Guard: if timestamps or prices are missing/empty, treat as no data
   if (!timestamps?.length || !rawPrices?.length) {
@@ -60,17 +68,14 @@ async function fetchPrices(ticker, rangeKey) {
 
   let dates = [], prices = [];
 
-  // For intraday (Today), format as HH:MM
-  const isIntraday = interval === '5m';
-
-  // MTD: filter to current month
   const now = new Date();
-  const mtdStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const cutoffFn = RANGE_CUTOFF[rangeKey];
+  const cutoff = cutoffFn ? cutoffFn(now) : null;
 
   timestamps.forEach((ts, i) => {
     if (rawPrices[i] == null) return;
     const d = new Date(ts * 1000);
-    if (rangeKey === 'mtd' && d < mtdStart) return;
+    if (cutoff && d < cutoff) return;
 
     const label = isIntraday
       ? d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })

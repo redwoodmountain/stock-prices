@@ -1,6 +1,6 @@
-# Stock Prices – SPY Viewer
+# SP500 Tracker
 
-A static web app that shows 2 years of SPY (S&P 500 ETF) adjusted close price and volume — hosted free on GitHub Pages.
+A static web app comparing four S&P 500 ETFs (SPY, VOO, IVV, SPLG) across several timeframes — hosted free on GitHub Pages.
 
 **Live site:** https://redwoodmountain.github.io/stock-prices
 
@@ -8,18 +8,26 @@ A static web app that shows 2 years of SPY (S&P 500 ETF) adjusted close price an
 
 ## What This Does
 
-Fetches 2 years of daily SPY price data from [Alpha Vantage](https://www.alphavantage.co) (free stock data API) and renders two interactive charts in the browser:
+Renders an interactive price chart with a summary bar (date range, latest price, return %) for whichever ticker/timeframe button is selected.
 
-- **Line chart** — Adjusted closing price over time
-- **Bar chart** — Daily trading volume
+Price data is fetched **server-side** by `fetch_data.py`, run on a schedule by a GitHub Actions workflow, and committed to `data/<TICKER>.json`. The page just reads those static JSON files — no live third-party API calls or CORS proxy in the browser, so it isn't dependent on some proxy service staying up.
 
-Plus a summary bar showing the ticker, date range, latest close, and 2-year return %.
+Each ticker's JSON has three buckets:
+- `daily` — 10 years of daily bars (Yahoo caps true daily granularity at ~20y; 10y comfortably covers every range button up to 5Y)
+- `monthly` — full history at monthly granularity (Yahoo silently downgrades `range=max&interval=1d` to monthly anyway, so this is fetched explicitly for the "Max" button)
+- `intraday` — 5-minute bars for the current trading day, for "Today"
+
+`script.js` filters the `daily` bucket client-side by date cutoff for 5Y/3Y/2Y/1Y/YTD/MTD.
+
+**Known limitation:** SPLG currently doesn't resolve on Yahoo Finance's API (its quote page also 500s on yahoo.com as of writing) — the site shows "Data not yet available" for it until Yahoo fixes their end or it's swapped for another data source.
 
 ---
 
 ## Setup
 
-No setup needed. Just open the URL — it loads automatically.
+No setup needed to view the site — just open the URL.
+
+To run the data fetch locally: `python3 fetch_data.py` (stdlib only, no dependencies).
 
 ---
 
@@ -27,8 +35,10 @@ No setup needed. Just open the URL — it loads automatically.
 
 | Tool | Purpose |
 |------|---------|
-| HTML/CSS/JS | Everything — no framework, no backend |
-| Yahoo Finance | Free stock market data (via corsproxy.io) |
+| HTML/CSS/JS | Frontend — no framework |
+| Python 3 (stdlib) | `fetch_data.py` — server-side data fetch |
+| GitHub Actions | Runs `fetch_data.py` on a schedule, commits updated data |
+| Yahoo Finance | Stock market data source (`query1.finance.yahoo.com`, called server-side) |
 | [Chart.js](https://www.chartjs.org) | Interactive charts (loaded from CDN) |
 | GitHub Pages | Free static site hosting |
 
@@ -38,7 +48,11 @@ No setup needed. Just open the URL — it loads automatically.
 
 ```
 stock-prices/
-├── index.html   # App logic and charts
-├── style.css    # Styling
-└── README.md    # This file
+├── .github/workflows/update-data.yml  # Scheduled job: runs fetch_data.py, commits data/
+├── fetch_data.py                      # Fetches Yahoo Finance data server-side
+├── data/<TICKER>.json                 # Generated price data (committed by the workflow)
+├── index.html                         # Markup
+├── script.js                          # App logic and charts
+├── style.css                          # Styling
+└── README.md                          # This file
 ```
