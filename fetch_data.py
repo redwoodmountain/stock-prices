@@ -11,7 +11,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-TICKERS = ["SPY", "VOO", "IVV", "SPLG"]
+TICKERS = ["SPY", "VOO", "IVV"]
 DATA_DIR = Path(__file__).resolve().parent / "data"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; stock-prices-bot/1.0)"}
 

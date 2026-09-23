@@ -1,6 +1,6 @@
 # SP500 Tracker
 
-A static web app comparing four S&P 500 ETFs (SPY, VOO, IVV, SPLG) across several timeframes — hosted free on GitHub Pages.
+A static web app comparing three S&P 500 ETFs (SPY, VOO, IVV) across several timeframes — hosted free on GitHub Pages.
 
 **Live site:** https://redwoodmountain.github.io/stock-prices
 
@@ -18,8 +18,6 @@ Each ticker's JSON has three buckets:
 - `intraday` — 5-minute bars for the current trading day, for "Today"
 
 `script.js` filters the `daily` bucket client-side by date cutoff for 5Y/3Y/2Y/1Y/YTD/MTD.
-
-**Known limitation:** SPLG currently doesn't resolve on Yahoo Finance's API (its quote page also 500s on yahoo.com as of writing) — the site shows "Data not yet available" for it until Yahoo fixes their end or it's swapped for another data source.
 
 ---
 

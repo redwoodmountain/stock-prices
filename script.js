@@ -1,5 +1,5 @@
 // ── Config ────────────────────────────────────────────────
-const TICKERS = ['SPY', 'VOO', 'IVV', 'SPLG'];
+const TICKERS = ['SPY', 'VOO', 'IVV'];
 
 const RANGE_LABELS = {
   max: 'Max', '5y': '5Y', '3y': '3Y', '2y': '2Y',
