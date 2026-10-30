@@ -61,6 +61,15 @@ h1 {
   font-variant-numeric: tabular-nums;
 }
 
+.index-change {
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.index-change.positive { color: var(--positive); }
+.index-change.negative { color: var(--negative); }
+
 /* ── Info Button ───────────────────────────────────────── */
 .info-btn {
   width: 26px;

@@ -323,11 +323,22 @@ async function loadIndexLevel() {
   try {
     const res = await fetch('data/index.json');
     if (!res.ok) return;
-    const { price } = await res.json();
+    const { price, previousClose } = await res.json();
     if (typeof price !== 'number') return;
+    const fmt = n => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const el = document.getElementById('index-level');
-    el.textContent = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    el.textContent = fmt(price);
     el.hidden = false;
+
+    if (typeof previousClose !== 'number' || previousClose === 0) return;
+    const diff = price - previousClose;
+    const pct  = diff / previousClose * 100;
+    const sign = diff > 0 ? '+' : diff < 0 ? '−' : '';
+    const chg  = document.getElementById('index-change');
+    chg.textContent = `${sign}${fmt(Math.abs(diff))} (${sign}${Math.abs(pct).toFixed(2)}%)`;
+    chg.classList.toggle('positive', diff > 0);
+    chg.classList.toggle('negative', diff < 0);
+    chg.hidden = false;
   } catch (err) {
     console.error(err);
   }

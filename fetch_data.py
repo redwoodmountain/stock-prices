@@ -55,6 +55,7 @@ def fetch_index_level():
     return {
         "symbol": INDEX_SYMBOL,
         "price": round(meta["regularMarketPrice"], 2),
+        "previousClose": round(meta["chartPreviousClose"], 2),
         "updatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
 
