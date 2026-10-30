@@ -33,7 +33,7 @@ function formatDate(isoStr) {
 
 // ── State ─────────────────────────────────────────────────
 let activeTicker = 'SPY';
-let activeRange  = '2y';
+let activeRange  = 'ytd';
 let chart        = null;
 
 // ── Data Fetching ─────────────────────────────────────────
