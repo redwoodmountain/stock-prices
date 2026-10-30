@@ -318,5 +318,21 @@ document.getElementById('drawer-close').addEventListener('click', closeDrawer);
 overlay.addEventListener('click', closeDrawer);
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
 
+// ── S&P 500 Index Level ───────────────────────────────────
+async function loadIndexLevel() {
+  try {
+    const res = await fetch('data/index.json');
+    if (!res.ok) return;
+    const { price } = await res.json();
+    if (typeof price !== 'number') return;
+    const el = document.getElementById('index-level');
+    el.textContent = price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    el.hidden = false;
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 // ── Init ──────────────────────────────────────────────────
 fetchAndRender();
+loadIndexLevel();

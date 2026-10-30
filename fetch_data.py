@@ -7,11 +7,13 @@ restrictions and doesn't depend on a third-party CORS proxy staying alive.
 """
 import json
 import urllib.error
+import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
 TICKERS = ["SPY", "VOO", "IVV"]
+INDEX_SYMBOL = "^GSPC"  # the S&P 500 index itself, shown in the page header
 DATA_DIR = Path(__file__).resolve().parent / "data"
 HEADERS = {"User-Agent": "Mozilla/5.0 (compatible; stock-prices-bot/1.0)"}
 
@@ -39,6 +41,22 @@ def fetch_chart(ticker, range_, interval):
     )
     prices = [round(p, 2) if p is not None else None for p in prices]
     return {"timestamp": timestamps, "adjclose": prices}
+
+
+def fetch_index_level():
+    url = (
+        "https://query1.finance.yahoo.com/v8/finance/chart/"
+        f"{urllib.parse.quote(INDEX_SYMBOL)}?range=1d&interval=5m"
+    )
+    req = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        payload = json.load(resp)
+    meta = payload["chart"]["result"][0]["meta"]
+    return {
+        "symbol": INDEX_SYMBOL,
+        "price": round(meta["regularMarketPrice"], 2),
+        "updatedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    }
 
 
 def main():
@@ -69,6 +87,14 @@ def main():
             f"({len(daily['timestamp'])} daily, {len(monthly['timestamp'])} monthly, "
             f"{len(intraday['timestamp'])} intraday points)"
         )
+
+    try:
+        index = fetch_index_level()
+    except (urllib.error.URLError, KeyError, IndexError, TypeError) as exc:
+        print(f"WARN: failed to fetch {INDEX_SYMBOL}: {exc}")
+    else:
+        (DATA_DIR / "index.json").write_text(json.dumps(index))
+        print(f"Wrote index.json ({INDEX_SYMBOL} = {index['price']})")
 
 
 if __name__ == "__main__":
